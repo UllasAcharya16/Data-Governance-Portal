@@ -1,0 +1,126 @@
+@import "tailwindcss";
+
+:root {
+  /* Light Mode Palette */
+  --background: #f8fafc; /* Slate 50 */
+  --foreground: #0f172a; /* Slate 900 */
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --card-border: #e2e8f0; /* Slate 200 */
+  
+  --sidebar: #0f172a; /* Deep Slate - keeping sidebar dark for premium contrast */
+  --sidebar-foreground: #f8fafc;
+  --sidebar-border: #1e293b;
+  --sidebar-accent: #1e293b;
+  --sidebar-accent-foreground: #ffffff;
+
+  --accent: #3b82f6; /* Premium Blue */
+  --accent-foreground: #ffffff;
+  --accent-light: #eff6ff;
+
+  --success: #10b981; /* Emerald */
+  --warning: #f59e0b; /* Amber */
+  --error: #ef4444; /* Rose */
+  --info: #0ea5e9; /* Sky */
+
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.05), 0 4px 6px -4px rgb(0 0 0 / 0.05);
+}
+
+.dark {
+  /* Dark Mode Palette - Enterprise Slate Blue */
+  --background: #090d16; /* Deep dark blue-gray */
+  --foreground: #f1f5f9; /* Slate 100 */
+  --card: #0f172a; /* Slate 900 */
+  --card-foreground: #f1f5f9;
+  --card-border: #1e293b; /* Slate 800 */
+  
+  --sidebar: #070a10; /* Darker than background */
+  --sidebar-foreground: #e2e8f0;
+  --sidebar-border: #111827;
+  --sidebar-accent: #1e293b;
+  --sidebar-accent-foreground: #ffffff;
+
+  --accent: #3b82f6;
+  --accent-foreground: #ffffff;
+  --accent-light: #172554;
+
+  --success: #10b981;
+  --warning: #f59e0b;
+  --error: #f43f5e;
+  --info: #0ea5e9;
+
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.3);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.3), 0 4px 6px -4px rgb(0 0 0 / 0.3);
+}
+
+@theme {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-card-border: var(--card-border);
+  
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent-light: var(--accent-light);
+
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-error: var(--error);
+  --color-info: var(--info);
+
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+}
+
+/* Base Body Style */
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--card-border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* Card glassmorphism highlights for dark mode */
+.dark .glass-card {
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
