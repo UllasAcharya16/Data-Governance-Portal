@@ -1,5 +1,99 @@
-import Database from "better-sqlite3";
-import path from "path";
+// Mock DB module for Vercel deployment
+// This file replaces the original SQLite based implementation with static mock data.
+// It imports data from src/data/mockData.js and provides the same utility functions
+// used throughout the app, ensuring compatibility without a database.
+
+import { mockGlossary, mockGovernanceTags, mockMetadataDatasets, mockQualityRules, mockLineage, mockDataplex, mockProfiling, mockSupportLake, mockAssignedTags } from "@/data/mockData";
+
+// Export functions that mimic the original DB queries but return mock data.
+export function getGlossaryCount() {
+  return mockGlossary.length;
+}
+
+export function getTagsCount() {
+  return mockGovernanceTags.length;
+}
+
+export function getDatasetsCount() {
+  return mockMetadataDatasets.length;
+}
+
+export function getQualityScore() {
+  // Simple average of rule statuses (Passed=100, Failed=0, else 50)
+  if (!mockQualityRules.length) return 0;
+  const total = mockQualityRules.reduce((sum, rule) => {
+    if (rule.status === "Passed") return sum + 100;
+    if (rule.status === "Failed") return sum + 0;
+    return sum + 50;
+  }, 0);
+  return Math.round(total / mockQualityRules.length);
+}
+
+export function getLakesCount() {
+  const lakeNames = new Set(mockDataplex.map((d) => d.lake_name));
+  return lakeNames.size;
+}
+
+// Additional helper getters mirroring original API (if used elsewhere)
+export function getAllGlossary() { return mockGlossary; }
+export function getAllGovernanceTags() { return mockGovernanceTags; }
+export function getAllAssignedTags() { return mockAssignedTags; }
+export function getAllQualityRules() { return mockQualityRules; }
+export function getAllLineage() { return mockLineage; }
+export function getAllDataplex() { return mockDataplex; }
+export function getAllProfiling() { return mockProfiling; }
+export function getAllSupportLake() { return mockSupportLake; }
+
+// Export a dummy getDb for compatibility – returns an object with a mock `prepare` method.
+export function getDb() {
+  // Simple mock that mimics the subset of SQLite API used in the app.
+  return {
+    prepare: (sql) => {
+      // Very naive parsing – we'll handle the specific queries used in the app.
+      const trimmed = sql.trim().toLowerCase();
+      if (trimmed.includes("select * from governance_tags")) {
+        return { all: () => mockGovernanceTags };
+      }
+      if (trimmed.includes("select * from assigned_tags")) {
+        return { all: () => mockAssignedTags };
+      }
+      if (trimmed.includes("select * from glossary")) {
+        return { all: () => mockGlossary };
+      }
+      if (trimmed.includes("select * from metadata_datasets")) {
+        return { all: () => mockMetadataDatasets };
+      }
+      if (trimmed.includes("select * from data_quality_rules")) {
+        return { all: () => mockQualityRules };
+      }
+      // Default fallback
+      return { all: () => [] };
+    },
+    // For count queries used in original helpers
+    get: (sql) => {
+      const trimmed = sql.trim().toLowerCase();
+      if (trimmed.includes("count(*) as cnt from glossary")) {
+        return { cnt: mockGlossary.length };
+      }
+      if (trimmed.includes("count(*) as cnt from governance_tags")) {
+        return { cnt: mockGovernanceTags.length };
+      }
+      if (trimmed.includes("count(*) as cnt from metadata_datasets")) {
+        return { cnt: mockMetadataDatasets.length };
+      }
+      if (trimmed.includes("avg")) {
+        // Used for quality score – reuse getQualityScore
+        return { score: getQualityScore() };
+      }
+      if (trimmed.includes("count(distinct lake_name)")) {
+        const lakeNames = new Set(mockDataplex.map((d) => d.lake_name));
+        return { cnt: lakeNames.size };
+      }
+      return { cnt: 0 };
+    },
+  };
+}
+
 
 // Singleton database connection instance
 let dbInstance = null;
