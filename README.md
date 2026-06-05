@@ -1,3 +1,5 @@
+##DEMO:  data-governance-portal.vercel.app
+
 # Enterprise Governance Portal
 
 A **Next.js 16** application that provides a real‑time data‑governance dashboard backed by an **SQLite** database powered by `better-sqlite3`. The app showcases modern UI design (glass‑morphism cards, dark mode, micro‑animations) and implements a suite of API routes for data quality validation, lineage, profiling, and catalog management.
