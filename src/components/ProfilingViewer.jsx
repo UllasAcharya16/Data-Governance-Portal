@@ -282,94 +282,106 @@ export default function ProfilingViewer({ initialProfiling = [], salesData = [] 
                 </div>
               </div>
 
-              <div className="h-72 w-full flex items-center justify-center">
-                {mounted ? (
-                  chartType === "order" ? (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                        data={orderChartData}
-                        margin={{ top: 20, right: 10, left: -10, bottom: 5 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(var(--card-border-rgb, 120, 120, 120), 0.1)" />
-                        <XAxis dataKey="name" stroke="var(--text-muted)" fontSize={11} tickLine={false} />
-                        <YAxis stroke="var(--text-muted)" fontSize={11} tickLine={false} />
-                        <Tooltip
-                          contentStyle={{
-                            backgroundColor: "var(--card-bg, #1e293b)",
-                            borderColor: "var(--card-border, #334155)",
-                            borderRadius: "8px",
-                            color: "var(--text-primary, #f1f5f9)"
-                          }}
-                          labelStyle={{ fontWeight: "bold" }}
-                          formatter={(value, name, props) => {
-                            if (props.payload.rawValue === null) return ["NULL (No Data)", "Revenue"];
-                            return [`$${value}`, "Revenue"];
-                          }}
-                        />
-                        <ReferenceLine y={0} stroke="rgba(244, 63, 94, 0.6)" strokeDasharray="3 3" />
-                        <Bar dataKey="revenue" radius={[4, 4, 0, 0]}>
-                          {orderChartData.map((entry, index) => {
-                            if (entry.rawValue === null) return <Cell key={`cell-${index}`} fill="#475569" stroke="#64748b" strokeWidth={1} strokeDasharray="2 2" />;
-                            if (entry.revenue < 0) return <Cell key={`cell-${index}`} fill="#f43f5e" />; // Rose for negative
-                            return <Cell key={`cell-${index}`} fill="#0ea5e9" />; // Teal for positive
-                          })}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
-                  ) : chartType === "monthly" ? (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                        data={monthlyChartData}
-                        margin={{ top: 20, right: 10, left: -10, bottom: 5 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(var(--card-border-rgb, 120, 120, 120), 0.1)" />
-                        <XAxis dataKey="name" stroke="var(--text-muted)" fontSize={11} tickLine={false} />
-                        <YAxis stroke="var(--text-muted)" fontSize={11} tickLine={false} />
-                        <Tooltip
-                          contentStyle={{
-                            backgroundColor: "var(--card-bg, #1e293b)",
-                            borderColor: "var(--card-border, #334155)",
-                            borderRadius: "8px",
-                            color: "var(--text-primary, #f1f5f9)"
-                          }}
-                          labelStyle={{ fontWeight: "bold" }}
-                          formatter={(value) => [`$${value}`, "Total Revenue"]}
-                        />
-                        <Bar dataKey="revenue" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  ) : (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={completenessData}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={60}
-                          outerRadius={90}
-                          paddingAngle={5}
-                          dataKey="value"
-                        >
-                          {completenessData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                          ))}
-                        </Pie>
-                        <Tooltip
-                          contentStyle={{
-                            backgroundColor: "var(--card-bg, #1e293b)",
-                            borderColor: "var(--card-border, #334155)",
-                            borderRadius: "8px",
-                            color: "var(--text-primary, #f1f5f9)"
-                          }}
-                        />
-                        <Legend verticalAlign="bottom" height={36} iconType="circle" />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  )
-                ) : (
-                  <div className="text-text-muted text-xs">Loading analytics...</div>
-                )}
-              </div>
+<div className="h-[350px] w-full flex items-center justify-center">
+  {mounted ? (
+    chartType === "order" ? (
+      orderChartData && orderChartData.length > 0 ? (
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            data={orderChartData}
+            margin={{ top: 20, right: 10, left: -10, bottom: 5 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(var(--card-border-rgb, 120, 120, 120), 0.1)" />
+            <XAxis dataKey="name" stroke="var(--text-muted)" fontSize={11} tickLine={false} />
+            <YAxis stroke="var(--text-muted)" fontSize={11} tickLine={false} />
+            <Tooltip
+              contentStyle={{
+                backgroundColor: "var(--card-bg, #1e293b)",
+                borderColor: "var(--card-border, #334155)",
+                borderRadius: "8px",
+                color: "var(--text-primary, #f1f5f9)"
+              }}
+              labelStyle={{ fontWeight: "bold" }}
+              formatter={(value, name, props) => {
+                if (props.payload.rawValue === null) return ["NULL (No Data)", "Revenue"];
+                return [`$${value}`, "Revenue"];
+              }}
+            />
+            <ReferenceLine y={0} stroke="rgba(244, 63, 94, 0.6)" strokeDasharray="3 3" />
+            <Bar dataKey="revenue" radius={[4, 4, 0, 0]}>
+              {orderChartData.map((entry, index) => {
+                if (entry.rawValue === null) return <Cell key={`cell-${index}`} fill="#475569" stroke="#64748b" strokeWidth={1} strokeDasharray="2 2" />;
+                if (entry.revenue < 0) return <Cell key={`cell-${index}`} fill="#f43f5e" />;
+                return <Cell key={`cell-${index}`} fill="#0ea5e9" />;
+              })}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      ) : (
+        <div className="text-center text-sm text-text-muted py-8">No data available</div>
+      )
+    ) : chartType === "monthly" ? (
+      monthlyChartData && monthlyChartData.length > 0 ? (
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            data={monthlyChartData}
+            margin={{ top: 20, right: 10, left: -10, bottom: 5 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(var(--card-border-rgb, 120, 120, 120), 0.1)" />
+            <XAxis dataKey="name" stroke="var(--text-muted)" fontSize={11} tickLine={false} />
+            <YAxis stroke="var(--text-muted)" fontSize={11} tickLine={false} />
+            <Tooltip
+              contentStyle={{
+                backgroundColor: "var(--card-bg, #1e293b)",
+                borderColor: "var(--card-border, #334155)",
+                borderRadius: "8px",
+                color: "var(--text-primary, #f1f5f9)"
+              }}
+              labelStyle={{ fontWeight: "bold" }}
+              formatter={(value) => [`$${value}`, "Total Revenue"]}
+            />
+            <Bar dataKey="revenue" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      ) : (
+        <div className="text-center text-sm text-text-muted py-8">No data available</div>
+      )
+    ) : (
+      completenessData && completenessData.length > 0 ? (
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={completenessData}
+              cx="50%"
+              cy="50%"
+              innerRadius={60}
+              outerRadius={90}
+              paddingAngle={5}
+              dataKey="value"
+            >
+              {completenessData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={entry.color} />
+              ))}
+            </Pie>
+            <Tooltip
+              contentStyle={{
+                backgroundColor: "var(--card-bg, #1e293b)",
+                borderColor: "var(--card-border, #334155)",
+                borderRadius: "8px",
+                color: "var(--text-primary, #f1f5f9)"
+              }}
+            />
+            <Legend verticalAlign="bottom" height={36} iconType="circle" />
+          </PieChart>
+        </ResponsiveContainer>
+      ) : (
+        <div className="text-center text-sm text-text-muted py-8">No data available</div>
+      )
+    )
+  ) : (
+    <div className="text-text-muted text-xs">Loading analytics...</div>
+  )}
+</div>
             </div>
 
             {/* Suspicious Values Panel */}
