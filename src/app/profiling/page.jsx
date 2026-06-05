@@ -1,20 +1,28 @@
+// src/app/profiling/page.jsx
+
 import React from "react";
 import { getDb } from "@/lib/db";
+import { getSampleSales } from "@/lib/bigquery";
 import ProfilingViewer from "@/components/ProfilingViewer";
 import { BarChart3 } from "lucide-react";
 
 export const revalidate = 0;
 
-export default function ProfilingPage() {
-  let profiling = [];
-  let salesData = [];
+export default async function ProfilingPage() {
+  // SQLite data for profiling metadata
+  const db = getDb();
+  const profiling = db.prepare("SELECT * FROM data_profiling").all();
 
-  try {
-    const db = getDb();
-    profiling = db.prepare("SELECT * FROM data_profiling").all();
+  // Sales data – use BigQuery when enabled, otherwise fallback to SQLite
+  let salesData = [];
+  if (process.env.USE_GCP_DB === "true") {
+    try {
+      salesData = await getSampleSales();
+    } catch (err) {
+      console.error("Failed to fetch sample_sales from BigQuery:", err);
+    }
+  } else {
     salesData = db.prepare("SELECT * FROM sample_sales ORDER BY order_id ASC").all();
-  } catch (error) {
-    console.error("Failed to query profiling data:", error);
   }
 
   return (

@@ -1,351 +1,86 @@
+// src/lib/db.js
+
 // Mock DB module for Vercel deployment
-// This file replaces the original SQLite based implementation with static mock data.
-// It imports data from src/data/mockData.js and provides the same utility functions
-// used throughout the app, ensuring compatibility without a database.
+// Provides the same API as the original SQLite implementation using static mock data.
 
-import { mockGlossary, mockGovernanceTags, mockMetadataDatasets, mockQualityRules, mockLineage, mockDataplex, mockProfiling, mockSupportLake, mockAssignedTags } from "@/data/mockData";
+import { glossary, tags, datasets, qualityRules, lineage, profiling, assignedTags } from "@/data/mockData";
 
-// Export functions that mimic the original DB queries but return mock data.
-export function getGlossaryCount() {
-  return mockGlossary.length;
+/**
+ * Simple query executor that understands the subset of SQL used in the app.
+ * Returns either an array (for SELECT * queries) or an object for scalar results.
+ */
+function executeQuery(sql) {
+  const q = sql.trim().toLowerCase();
+
+  // ----- Count queries -----
+  if (q.includes("count(*) as count from glossary")) return { count: glossary.length };
+  if (q.includes("count(*) as count from governance_tags")) return { count: tags.length };
+  if (q.includes("count(*) as count from metadata_catalog")) {
+    const tables = new Set(profiling.map(p => p.table_name));
+    return { count: tables.size };
+  }
+  if (q.includes("count(*) as count from metadata_datasets")) return { count: datasets.length };
+  if (q.includes("count(*) as count from sample_sales")) return { count: 0 }; // fallback, real data via BigQuery
+
+  // ----- Average quality score -----
+  if (q.includes("avg(quality_score) as score")) {
+    const scores = profiling.map(p => p.quality_score).filter(v => typeof v === "number");
+    const avg = scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
+    return { score: avg };
+  }
+
+  // ----- Generic SELECT * queries -----
+  if (q.includes("select * from glossary")) return glossary;
+  if (q.includes("select * from governance_tags")) return tags;
+  if (q.includes("select * from assigned_tags")) return assignedTags;
+  if (q.includes("select * from metadata_datasets")) return datasets;
+  if (q.includes("select * from data_quality_rules")) return qualityRules;
+  if (q.includes("select * from metadata_catalog")) return profiling;
+  if (q.includes("select * from sample_sales")) return []; // real data via BigQuery
+
+  // Default empty result
+  return [];
 }
 
-export function getTagsCount() {
-  return mockGovernanceTags.length;
-}
-
-export function getDatasetsCount() {
-  return mockMetadataDatasets.length;
-}
+// Export count helpers
+export function getGlossaryCount() { return glossary.length; }
+export function getTagsCount() { return tags.length; }
+export function getDatasetsCount() { return datasets.length; }
 
 export function getQualityScore() {
-  // Simple average of rule statuses (Passed=100, Failed=0, else 50)
-  if (!mockQualityRules.length) return 0;
-  const total = mockQualityRules.reduce((sum, rule) => {
-    if (rule.status === "Passed") return sum + 100;
-    if (rule.status === "Failed") return sum + 0;
-    return sum + 50;
-  }, 0);
-  return Math.round(total / mockQualityRules.length);
+  if (!qualityRules.length) return 0;
+  const total = qualityRules.reduce((sum, r) => (r.status === "Passed" ? sum + 100 : sum + 0), 0);
+  return Math.round(total / qualityRules.length);
 }
 
 export function getLakesCount() {
-  const lakeNames = new Set(mockDataplex.map((d) => d.lake_name));
+  if (!lineage?.nodes) return 0;
+  const lakeNames = new Set(lineage.nodes.filter(n => n.type === "lake").map(n => n.label));
   return lakeNames.size;
 }
 
-// Additional helper getters mirroring original API (if used elsewhere)
-export function getAllGlossary() { return mockGlossary; }
-export function getAllGovernanceTags() { return mockGovernanceTags; }
-export function getAllAssignedTags() { return mockAssignedTags; }
-export function getAllQualityRules() { return mockQualityRules; }
-export function getAllLineage() { return mockLineage; }
-export function getAllDataplex() { return mockDataplex; }
-export function getAllProfiling() { return mockProfiling; }
-export function getAllSupportLake() { return mockSupportLake; }
+// Additional getters mirroring original API
+export function getAllGlossary() { return glossary; }
+export function getAllGovernanceTags() { return tags; }
+export function getAllAssignedTags() { return assignedTags; }
+export function getAllQualityRules() { return qualityRules; }
+export function getAllLineage() { return lineage; }
+export function getAllDataplex() { return []; }
+export function getAllProfiling() { return profiling; }
+export function getAllSupportLake() { return []; }
 
-// Export a dummy getDb for compatibility – returns an object with a mock `prepare` method.
+/** Compatibility layer mimicking the subset of the SQLite API used by the app */
 export function getDb() {
-  // Simple mock that mimics the subset of SQLite API used in the app.
   return {
-    prepare: (sql) => {
-      // Very naive parsing – we'll handle the specific queries used in the app.
-      const trimmed = sql.trim().toLowerCase();
-      if (trimmed.includes("select * from governance_tags")) {
-        return { all: () => mockGovernanceTags };
-      }
-      if (trimmed.includes("select * from assigned_tags")) {
-        return { all: () => mockAssignedTags };
-      }
-      if (trimmed.includes("select * from glossary")) {
-        return { all: () => mockGlossary };
-      }
-      if (trimmed.includes("select * from metadata_datasets")) {
-        return { all: () => mockMetadataDatasets };
-      }
-      if (trimmed.includes("select * from data_quality_rules")) {
-        return { all: () => mockQualityRules };
-      }
-      // Default fallback
-      return { all: () => [] };
+    prepare: sql => {
+      const result = executeQuery(sql);
+      const isArray = Array.isArray(result);
+      return {
+        all: () => (isArray ? result : []),
+        get: () => (!isArray ? result : undefined),
+      };
     },
-    // For count queries used in original helpers
-    get: (sql) => {
-      const trimmed = sql.trim().toLowerCase();
-      if (trimmed.includes("count(*) as cnt from glossary")) {
-        return { cnt: mockGlossary.length };
-      }
-      if (trimmed.includes("count(*) as cnt from governance_tags")) {
-        return { cnt: mockGovernanceTags.length };
-      }
-      if (trimmed.includes("count(*) as cnt from metadata_datasets")) {
-        return { cnt: mockMetadataDatasets.length };
-      }
-      if (trimmed.includes("avg")) {
-        // Used for quality score – reuse getQualityScore
-        return { score: getQualityScore() };
-      }
-      if (trimmed.includes("count(distinct lake_name)")) {
-        const lakeNames = new Set(mockDataplex.map((d) => d.lake_name));
-        return { cnt: lakeNames.size };
-      }
-      return { cnt: 0 };
-    },
+    // Direct get for scalar queries (e.g., count, avg)
+    get: sql => executeQuery(sql),
   };
-}
-
-
-// Singleton database connection instance
-let dbInstance = null;
-
-export function getDb() {
-  if (dbInstance) {
-    return dbInstance;
-  }
-
-  const dbPath = path.join(process.cwd(), "data_governance.db");
-  const db = new Database(dbPath);
-  // Enable WAL mode for better performance
-  db.pragma("journal_mode = WAL");
-
-  // Initialize and seed tables if they do not exist
-  initializeDatabase(db);
-
-  dbInstance = db;
-  return dbInstance;
-}
-
-// Helper functions for dashboard metrics
-export function getGlossaryCount() {
-  const db = getDb();
-  const row = db.prepare(`SELECT COUNT(*) as cnt FROM glossary`).get();
-  return row.cnt;
-}
-
-export function getTagsCount() {
-  const db = getDb();
-  const row = db.prepare(`SELECT COUNT(*) as cnt FROM governance_tags`).get();
-  return row.cnt;
-}
-
-export function getDatasetsCount() {
-  const db = getDb();
-  const row = db.prepare(`SELECT COUNT(*) as cnt FROM metadata_datasets`).get();
-  return row.cnt;
-}
-
-export function getQualityScore() {
-  const db = getDb();
-  const row = db.prepare(`SELECT AVG(CASE status WHEN 'Passed' THEN 100 WHEN 'Failed' THEN 0 ELSE 50 END) as score FROM data_quality_rules`).get();
-  return Math.round(row.score || 0);
-}
-
-export function getLakesCount() {
-  const db = getDb();
-  const row = db.prepare(`SELECT COUNT(DISTINCT lake_name) as cnt FROM dataplex_architecture`).get();
-  return row.cnt;
-}
-
-function initializeDatabase(db) {
-  // Ensure sample_sales table exists and is seeded
-  const salesTableCheck = db
-    .prepare(
-      "SELECT name FROM sqlite_master WHERE type='table' AND name='sample_sales'",
-    )
-    .get();
-  if (!salesTableCheck) {
-    db.prepare(`
-      CREATE TABLE sample_sales (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        order_id INTEGER UNIQUE NOT NULL,
-        month TEXT NOT NULL,
-        revenue REAL,
-        successful_orders INTEGER NOT NULL
-      )
-    `).run();
-
-    const insertSales = db.prepare(`
-      INSERT INTO sample_sales (order_id, month, revenue, successful_orders)
-      VALUES (?, ?, ?, ?)
-    `);
-    insertSales.run(101, "Jan", 500, 1);
-    insertSales.run(102, "Jan", null, 0);
-    insertSales.run(103, "Feb", -50, 0);
-    insertSales.run(104, "Feb", 1200, 1);
-    insertSales.run(105, "Mar", 700, 1);
-  }
-
-  // Check if a table exists (e.g., glossary)
-  const tableCheck = db
-    .prepare(
-      "SELECT name FROM sqlite_master WHERE type='table' AND name='glossary'",
-    )
-    .get();
-  if (tableCheck) {
-    // Already initialized
-    return;
-  }
-
-  // Create tables using a transaction to ensure atomic execution
-  const initTransaction = db.transaction(() => {
-    // 1. Business Glossary
-    db.prepare(`
-      CREATE TABLE glossary (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        term TEXT UNIQUE NOT NULL,
-        definition TEXT NOT NULL,
-        category TEXT NOT NULL,
-        owner TEXT NOT NULL,
-        status TEXT NOT NULL,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP
-      )
-    `).run();
-
-    // 2. Governance Tags
-    db.prepare(`
-      CREATE TABLE governance_tags (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT UNIQUE NOT NULL,
-        description TEXT NOT NULL,
-        classification TEXT NOT NULL,
-        asset_count INTEGER DEFAULT 0
-      )
-    `).run();
-
-    // 3. Metadata Catalog
-    db.prepare(`
-      CREATE TABLE metadata_catalog (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        table_name TEXT NOT NULL,
-        column_name TEXT NOT NULL,
-        data_type TEXT NOT NULL,
-        description TEXT NOT NULL,
-        is_pii INTEGER DEFAULT 0,
-        quality_score INTEGER DEFAULT 100,
-        owner TEXT NOT NULL,
-        system TEXT NOT NULL
-      )
-    `).run();
-
-    // 4. Lineage Nodes
-    db.prepare(`
-      CREATE TABLE lineage_nodes (
-        id TEXT PRIMARY KEY,
-        label TEXT NOT NULL,
-        type TEXT NOT NULL,
-        status TEXT NOT NULL
-      )
-    `).run();
-
-    // 5. Lineage Edges
-    db.prepare(`
-      CREATE TABLE lineage_edges (
-        id TEXT PRIMARY KEY,
-        source TEXT NOT NULL,
-        target TEXT NOT NULL,
-        FOREIGN KEY (source) REFERENCES lineage_nodes(id),
-        FOREIGN KEY (target) REFERENCES lineage_nodes(id)
-      )
-    `).run();
-
-    // 6. Dataplex Architecture
-    db.prepare(`
-      CREATE TABLE dataplex_architecture (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        lake_name TEXT NOT NULL,
-        zone_name TEXT NOT NULL,
-        asset_name TEXT NOT NULL,
-        asset_type TEXT NOT NULL,
-        status TEXT NOT NULL,
-        last_sync TEXT NOT NULL
-      )
-    `).run();
-
-    // 7. Data Profiling
-    db.prepare(`
-      CREATE TABLE data_profiling (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        table_name TEXT NOT NULL,
-        column_name TEXT NOT NULL,
-        row_count INTEGER NOT NULL,
-        null_count INTEGER NOT NULL,
-        null_percentage REAL NOT NULL,
-        distinct_values INTEGER NOT NULL,
-        min_value TEXT,
-        max_value TEXT,
-        mean_value REAL
-      )
-    `).run();
-
-    // 8. Data Quality Rules
-    db.prepare(`
-      CREATE TABLE data_quality_rules (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        rule_name TEXT NOT NULL,
-        table_name TEXT NOT NULL,
-        column_name TEXT NOT NULL,
-        rule_type TEXT NOT NULL,
-        status TEXT NOT NULL,
-        last_run TEXT NOT NULL,
-        error_count INTEGER NOT NULL
-      )
-    `).run();
-
-    // 9. Customer Support Lake
-    db.prepare(`
-      CREATE TABLE customer_support_lake (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        file_name TEXT NOT NULL,
-        file_type TEXT NOT NULL,
-        file_size_mb REAL NOT NULL,
-        row_count INTEGER NOT NULL,
-        quality_score INTEGER NOT NULL,
-        sync_frequency TEXT NOT NULL,
-        last_ingested TEXT NOT NULL
-      )
-    `).run();
-
-    // 10. Assigned Tags (Governance Templates)
-    db.prepare(`
-      CREATE TABLE assigned_tags (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        asset_name TEXT UNIQUE NOT NULL,
-        template_name TEXT NOT NULL,
-        data_steward TEXT NOT NULL,
-        confidentiality_level TEXT NOT NULL,
-        retention_period INTEGER NOT NULL,
-        contains_pii INTEGER NOT NULL,
-        assigned_at TEXT DEFAULT CURRENT_TIMESTAMP
-      )
-    `).run();
-
-    // 11. Metadata Datasets (Dataset level catalog)
-    db.prepare(`
-      CREATE TABLE metadata_datasets (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        dataset_name TEXT UNIQUE NOT NULL,
-        business_description TEXT NOT NULL,
-        owner_team TEXT NOT NULL,
-        refresh_frequency TEXT NOT NULL,
-        domain_name TEXT NOT NULL,
-        certification_status TEXT NOT NULL,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP
-      )
-    `).run();
-  });
-  initTransaction();
-
-  // --- SEED SAMPLE DATA ---
-  const insertGlossary = db.prepare(`
-    INSERT INTO glossary (term, definition, category, owner, status)
-    VALUES (?, ?, ?, ?, ?)
-  `);
-  insertGlossary.run(
-    "Customer ID",
-    "A globally unique identifier assigned to each registered customer in the Core Banking System.",
-    "Customer Domain",
-    "Sarah Jenkins (Data Stewards)",
-    "Approved",
-  );
-  // Additional seed data omitted for brevity
 }

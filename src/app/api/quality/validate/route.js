@@ -1,10 +1,18 @@
 // src/app/api/quality/validate/route.js
+
 import { NextResponse } from 'next/server';
-import { getDb } from '@/lib/db';
+import { getSampleSales } from '@/lib/bigquery';
 
 export async function GET() {
-  const db = getDb();
-  const rows = db.prepare('SELECT * FROM sample_sales').all();
+  // Fetch sample_sales from BigQuery (fallback to empty array if error)
+  let rows = [];
+  try {
+    rows = await getSampleSales();
+  } catch (err) {
+    console.error('Failed to fetch sample_sales from BigQuery:', err);
+    // In fallback mode, you could retrieve mock data here.
+  }
+
   const totalRows = rows.length;
   let passedRows = 0;
   const ruleFailures = {

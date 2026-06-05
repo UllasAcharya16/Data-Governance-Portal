@@ -281,7 +281,7 @@ export default function GlossarySearch({ initialTerms }) {
                   </span>
                 </div>
                 <div>
-                  Added: <span>{term.created_at.split(" ")[0]}</span>
+
                 </div>
               </div>
             </div>
